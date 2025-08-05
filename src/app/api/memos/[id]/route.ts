@@ -7,15 +7,9 @@ interface Comment {
     timestamp: string;
 }
 
-interface RouteContext {
-    params: {
-        id: string;
-    }
-}
-
-export async function DELETE(req: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
     const id = Number(params.id);
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const commentId = searchParams.get('commentId');
 
     if (commentId) {
@@ -32,7 +26,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
             return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
         }
 
-        const updatedComments = memoData.comments.filter((c: Comment) => c.id !== commentIdNum);
+        const updatedComments = (memoData.comments as Comment[]).filter((c) => c.id !== commentIdNum);
 
         const { error: updateError } = await supabase
             .from('memos')

@@ -1,41 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-
-const dataFilePath = path.join(process.cwd(), 'data', 'memos.json');
-
-interface Comment {
-  id: number;
-  text: string;
-  timestamp: string;
-}
-
-interface Memo {
-  id: number;
-  text: string;
-  timestamp: string;
-  comments: Comment[];
-}
-
-async function readMemos(): Promise<Memo[]> {
-  try {
-    const data = await fs.readFile(dataFilePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
-    }
-    throw error;
-  }
-}
-
-async function writeMemos(memos: Memo[]) {
-  await fs.writeFile(dataFilePath, JSON.stringify(memos, null, 2));
-}
+import { supabase } from '@/utils/supabase';
 
 export async function GET() {
-  const memos = await readMemos();
-  return NextResponse.json(memos);
+  const { data, error } = await supabase.from('memos').select('*').order('created_at', { ascending: true });
+  if (error) {
+    console.error('Error fetching memos:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json(data);
 }
 
 export async function POST(req: NextRequest) {
@@ -44,17 +16,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Text is required' }, { status: 400 });
   }
 
-  const memos = await readMemos();
-  const newMemo: Memo = {
-    id: Date.now(),
-    text,
-    timestamp: new Date().toLocaleString('ko-KR'),
-    comments: [],
-  };
-  memos.push(newMemo);
-  await writeMemos(memos);
+  const { data, error } = await supabase.from('memos').insert([{ text, comments: [] }]).select();
 
-  return NextResponse.json(newMemo, { status: 201 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data[0], { status: 201 });
 }
 
 export async function PUT(req: NextRequest) {
@@ -63,10 +31,14 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: 'memoId and comment are required' }, { status: 400 });
     }
 
-    const memos = await readMemos();
-    const memoIndex = memos.findIndex(m => m.id === memoId);
+    // First, get the current comments
+    const { data: memoData, error: fetchError } = await supabase
+        .from('memos')
+        .select('comments')
+        .eq('id', memoId)
+        .single();
 
-    if (memoIndex === -1) {
+    if (fetchError || !memoData) {
         return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
     }
 
@@ -76,8 +48,17 @@ export async function PUT(req: NextRequest) {
         timestamp: new Date().toLocaleString('ko-KR'),
     };
 
-    memos[memoIndex].comments.push(newComment);
-    await writeMemos(memos);
+    const updatedComments = [...memoData.comments, newComment];
 
-    return NextResponse.json(memos[memoIndex], { status: 200 });
+    const { data, error } = await supabase
+        .from('memos')
+        .update({ comments: updatedComments })
+        .eq('id', memoId)
+        .select();
+
+    if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data[0], { status: 200 });
 }

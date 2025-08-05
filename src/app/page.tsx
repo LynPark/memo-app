@@ -12,7 +12,7 @@ interface Comment {
 interface Memo {
   id: number;
   text: string;
-  timestamp: string;
+  created_at: string;
   comments: Comment[];
 }
 
@@ -29,7 +29,12 @@ export default function Home() {
   const fetchMemos = async () => {
     const response = await fetch("/api/memos");
     const data = await response.json();
-    setMemos(data);
+    if (Array.isArray(data)) {
+      setMemos(data);
+    } else {
+      console.error("Failed to fetch memos:", data);
+      setMemos([]);
+    }
   };
 
   const handleAddMemo = async () => {
@@ -87,21 +92,21 @@ export default function Home() {
   return (
     <div className="container vh-100 d-flex flex-column">
       <div className="flex-grow-1 overflow-auto p-3">
-        {memos.map((memo) => (
+        {memos?.map((memo) => (
           <div key={memo.id} className="mb-3">
             <div className="d-flex justify-content-end align-items-center mb-1">
                <Button variant="outline-danger" size="sm" className="me-2" onClick={() => handleDeleteMemo(memo.id)}>삭제</Button>
                <Button variant="outline-secondary" size="sm" className="me-2" onClick={() => setReplyingTo(memo.id)}>답장</Button>
               <div className="bg-primary text-white rounded p-2">
                 <div>{memo.text}</div>
-                <div className="text-end text-xs">{memo.timestamp}</div>
+                <div className="text-end text-xs">{new Date(memo.created_at).toLocaleString('ko-KR')}</div>
               </div>
             </div>
             {memo.comments.map((comment) => (
               <div key={comment.id} className="d-flex justify-content-start align-items-center mb-1 ms-5">
                 <div className="bg-light rounded p-2">
                   <div>{comment.text}</div>
-                  <div className="text-end text-xs">{comment.timestamp}</div>
+                  <div className="text-end text-xs">{new Date(comment.timestamp).toLocaleString('ko-KR')}</div>
                 </div>
                 <Button variant="outline-danger" size="sm" className="ms-2" onClick={() => handleDeleteComment(memo.id, comment.id)}>삭제</Button>
               </div>

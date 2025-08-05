@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/utils/supabase';
 
+interface Comment {
+    id: number;
+    text: string;
+    timestamp: string;
+}
+
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
     const id = Number(params.id);
     const { searchParams } = new URL(req.url);
@@ -20,7 +26,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             return NextResponse.json({ error: 'Memo not found' }, { status: 404 });
         }
 
-        const updatedComments = memoData.comments.filter((c: any) => c.id !== commentIdNum);
+        const updatedComments = memoData.comments.filter((c: Comment) => c.id !== commentIdNum);
 
         const { error: updateError } = await supabase
             .from('memos')

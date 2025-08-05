@@ -72,7 +72,7 @@ export default function Home() {
   };
 
   const handleDeleteMemo = async (memoId: number) => {
-    const response = await fetch(`/api/memos/${memoId}`, {
+    const response = await fetch(`/api/memos?memoId=${memoId}`, {
       method: "DELETE",
     });
     if (response.ok) {
@@ -81,7 +81,7 @@ export default function Home() {
   };
 
   const handleDeleteComment = async (memoId: number, commentId: number) => {
-    const response = await fetch(`/api/memos/${memoId}?commentId=${commentId}`, {
+    const response = await fetch(`/api/memos?memoId=${memoId}&commentId=${commentId}`, {
       method: "DELETE",
     });
     if (response.ok) {

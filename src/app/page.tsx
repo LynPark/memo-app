@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Form, InputGroup } from "react-bootstrap";
 
 interface Comment {
@@ -22,60 +22,66 @@ export default function Home() {
   const [newComment, setNewComment] = useState<{ [key: number]: string }>({});
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
 
-  const handleAddMemo = () => {
+  useEffect(() => {
+    fetchMemos();
+  }, []);
+
+  const fetchMemos = async () => {
+    const response = await fetch("/api/memos");
+    const data = await response.json();
+    setMemos(data);
+  };
+
+  const handleAddMemo = async () => {
     if (newMemo.trim() !== "") {
-      setMemos([
-        ...memos,
-        {
-          id: Date.now(),
-          text: newMemo,
-          timestamp: new Date().toLocaleString('ko-KR'),
-          comments: [],
+      const response = await fetch("/api/memos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ]);
-      setNewMemo("");
-    }
-  };
-
-  const handleAddComment = (memoId: number) => {
-    if (newComment[memoId] && newComment[memoId].trim() !== "") {
-      const updatedMemos = memos.map((memo) => {
-        if (memo.id === memoId) {
-          return {
-            ...memo,
-            comments: [
-              ...memo.comments,
-              {
-                id: Date.now(),
-                text: newComment[memoId],
-                timestamp: new Date().toLocaleString('ko-KR'),
-              },
-            ],
-          };
-        }
-        return memo;
+        body: JSON.stringify({ text: newMemo }),
       });
-      setMemos(updatedMemos);
-      setNewComment({ ...newComment, [memoId]: "" });
-      setReplyingTo(null);
+      if (response.ok) {
+        setNewMemo("");
+        fetchMemos();
+      }
     }
   };
 
-  const handleDeleteMemo = (memoId: number) => {
-    setMemos(memos.filter((memo) => memo.id !== memoId));
+  const handleAddComment = async (memoId: number) => {
+    if (newComment[memoId] && newComment[memoId].trim() !== "") {
+      const response = await fetch(`/api/memos`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ memoId, comment: newComment[memoId] }),
+      });
+
+      if (response.ok) {
+        setNewComment({ ...newComment, [memoId]: "" });
+        setReplyingTo(null);
+        fetchMemos();
+      }
+    }
   };
 
-  const handleDeleteComment = (memoId: number, commentId: number) => {
-    const updatedMemos = memos.map((memo) => {
-      if (memo.id === memoId) {
-        return {
-          ...memo,
-          comments: memo.comments.filter((comment) => comment.id !== commentId),
-        };
-      }
-      return memo;
+  const handleDeleteMemo = async (memoId: number) => {
+    const response = await fetch(`/api/memos/${memoId}`, {
+      method: "DELETE",
     });
-    setMemos(updatedMemos);
+    if (response.ok) {
+      fetchMemos();
+    }
+  };
+
+  const handleDeleteComment = async (memoId: number, commentId: number) => {
+    const response = await fetch(`/api/memos/${memoId}?commentId=${commentId}`, {
+      method: "DELETE",
+    });
+    if (response.ok) {
+      fetchMemos();
+    }
   };
 
   return (

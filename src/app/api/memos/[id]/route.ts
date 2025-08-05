@@ -7,8 +7,9 @@ interface Comment {
     timestamp: string;
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-    const id = Number(params.id);
+export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+    const { id: idString } = context.params;
+    const id = Number(idString);
     const { searchParams } = new URL(req.url);
     const commentId = searchParams.get('commentId');
 
